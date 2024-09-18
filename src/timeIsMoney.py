@@ -35,33 +35,19 @@ class MyGame(arcade.Window):
     """
 
     def __init__(self):
-        # Appelle la classe parente et configure la fenêtre
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-
-        # Objet Scene
         self.scene = None
-
-        # Variable séparée qui contient le sprite du joueur
         self.player_sprite = None
-
-        # Liste des ennemis
         self.enemy_list = None
-
-        # Notre moteur physique
+        self.coin_list = None  # Liste pour les pièces
         self.physics_engine = None
-
-        # Timer
         self.timer = TIMER_START
-
-        # Score d'argent
         self.money = INITIAL_MONEY
-
         arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
 
     def setup(self):
         """Configure le jeu ici. Appelez cette fonction pour redémarrer le jeu."""
 
-        # Initialiser la scène
         self.scene = arcade.Scene()
 
         # Configurer le joueur, en le plaçant spécifiquement à ces coordonnées
@@ -78,8 +64,9 @@ class MyGame(arcade.Window):
             wall.center_y = SCREEN_HEIGHT - y
             self.scene.add_sprite("Walls", wall)
 
-        # Placer des pièces aléatoirement dans le labyrinthe
-       # self.place_coins()
+        # Créer les pièces
+        self.coin_list = arcade.SpriteList()
+        self.place_coins()
 
         # Créer les ennemis
         self.enemy_list = arcade.SpriteList()
@@ -90,7 +77,19 @@ class MyGame(arcade.Window):
             self.player_sprite, self.scene.get_sprite_list("Walls")
         )
 
-    
+    def place_coins(self):
+        """Place des pièces aléatoirement dans le labyrinthe."""
+        for _ in range(10):  # Nombre de pièces à placer
+            while True:
+                x = random.randint(100, SCREEN_WIDTH - 100)
+                y = random.randint(100, SCREEN_HEIGHT - 100)
+                if not any(abs(x - wx) < TILE_SIZE and abs(y - wy) < TILE_SIZE for wx, wy in WALLS):
+                    coin = arcade.Sprite(":resources:images/items/coinGold_ul.png", TILE_SCALING)
+                    coin.center_x = x
+                    coin.center_y = y
+                    self.coin_list.append(coin)
+                    self.scene.add_sprite("Coins", coin)
+                    break
 
     def create_enemies(self):
         """Crée des ennemis et les place dans la scène."""
@@ -117,31 +116,32 @@ class MyGame(arcade.Window):
         # Vérifier les collisions entre le joueur et les ennemis
         enemies_hit = arcade.check_for_collision_with_list(self.player_sprite, self.enemy_list)
         for enemy in enemies_hit:
-            # Transformer l'ennemi en pièce
-            coin = arcade.Sprite(":resources:images/items/coinGold_ul.png", TILE_SCALING)
-            coin.center_x = enemy.center_x
-            coin.center_y = enemy.center_y
-            self.scene.add_sprite("Coins", coin)
+            self.create_coin_from_enemy(enemy)
             enemy.remove_from_sprite_lists()
+
+        # Vérifier les collisions entre le joueur et les pièces
+        coins_hit = arcade.check_for_collision_with_list(self.player_sprite, self.coin_list)
+        for coin in coins_hit:
+            self.money += COIN_VALUE
+            coin.remove_from_sprite_lists()
+
+    def create_coin_from_enemy(self, enemy):
+        """Crée une pièce à l'emplacement de l'ennemi mort et l'ajoute à la liste des pièces."""
+        coin = arcade.Sprite(":resources:images/items/coinGold_ul.png", TILE_SCALING)
+        coin.center_x = enemy.center_x
+        coin.center_y = enemy.center_y
+        self.coin_list.append(coin)
+        self.scene.add_sprite("Coins", coin)
 
     def on_draw(self):
         """Rend l'écran."""
 
-        # Effacer l'écran avec la couleur de fond
         self.clear()
-
-        # Dessiner notre scène
         self.scene.draw()
 
-        # Dessiner le timer
-        minutes = int(self.timer // 60)
-        seconds = int(self.timer % 60)
-        timer_text = f"Temps restant : {minutes:02}:{seconds:02}"
-        arcade.draw_text(timer_text, 10, SCREEN_HEIGHT - 40, arcade.color.BLACK, 16)
-
-        # Dessiner le score d'argent
-        money_text = f"Argent : {self.money}"
-        arcade.draw_text(money_text, 10, SCREEN_HEIGHT - 60, arcade.color.BLACK, 16)
+        minutes, seconds = divmod(int(self.timer), 60)
+        arcade.draw_text(f"Temps restant : {minutes:02}:{seconds:02}", 10, SCREEN_HEIGHT - 40, arcade.color.BLACK, 16)
+        arcade.draw_text(f"Argent : {self.money}", 10, SCREEN_HEIGHT - 60, arcade.color.BLACK, 16)
 
     def on_key_press(self, key, modifiers):
         """Appelé à chaque fois qu'une touche est enfoncée"""
