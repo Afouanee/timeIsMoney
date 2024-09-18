@@ -44,6 +44,9 @@ class MyGame(arcade.Window):
         # Variable séparée qui contient le sprite du joueur
         self.player_sprite = None
 
+        # Liste des ennemis
+        self.enemy_list = None
+
         # Notre moteur physique
         self.physics_engine = None
 
@@ -76,31 +79,50 @@ class MyGame(arcade.Window):
             self.scene.add_sprite("Walls", wall)
 
         # Placer des pièces aléatoirement dans le labyrinthe
-        self.place_coins()
+       # self.place_coins()
+
+        # Créer les ennemis
+        self.enemy_list = arcade.SpriteList()
+        self.create_enemies()
 
         # Créer le moteur physique
         self.physics_engine = arcade.PhysicsEngineSimple(
             self.player_sprite, self.scene.get_sprite_list("Walls")
         )
 
-    def place_coins(self):
-        """Placer des pièces aléatoirement dans le labyrinthe."""
+    
 
-        # Déterminer les positions des murs pour éviter les collisions
-        wall_positions = [(sprite.center_x, sprite.center_y) for sprite in self.scene.get_sprite_list("Walls")]
+    def create_enemies(self):
+        """Crée des ennemis et les place dans la scène."""
 
-        # Créer des pièces et les placer aléatoirement dans les chemins
-        num_coins = 10  # Nombre de pièces à placer
-        for _ in range(num_coins):
+        num_enemies = 5  # Nombre d'ennemis
+        for _ in range(num_enemies):
             while True:
                 x = random.randint(100, SCREEN_WIDTH - 100)
                 y = random.randint(100, SCREEN_HEIGHT - 100)
-                if not any(abs(x - wx) < TILE_SIZE and abs(y - wy) < TILE_SIZE for wx, wy in wall_positions):
-                    coin = arcade.Sprite(":resources:images/items/coinGold_ul.png", TILE_SCALING)
-                    coin.center_x = x
-                    coin.center_y = y
-                    self.scene.add_sprite("Coins", coin)
+                if not any(abs(x - wx) < TILE_SIZE and abs(y - wy) < TILE_SIZE for wx, wy in WALLS):
+                    enemy = arcade.Sprite("blastalot-wings-crouch-alpha.png", CHARACTER_SCALING)
+                    enemy.center_x = x
+                    enemy.center_y = y
+                    self.enemy_list.append(enemy)
+                    self.scene.add_sprite("Enemies", enemy)
                     break
+
+    def on_update(self, delta_time):
+        """Mouvement et logique du jeu"""
+
+        # Mettre à jour le moteur physique
+        self.physics_engine.update()
+
+        # Vérifier les collisions entre le joueur et les ennemis
+        enemies_hit = arcade.check_for_collision_with_list(self.player_sprite, self.enemy_list)
+        for enemy in enemies_hit:
+            # Transformer l'ennemi en pièce
+            coin = arcade.Sprite(":resources:images/items/coinGold_ul.png", TILE_SCALING)
+            coin.center_x = enemy.center_x
+            coin.center_y = enemy.center_y
+            self.scene.add_sprite("Coins", coin)
+            enemy.remove_from_sprite_lists()
 
     def on_draw(self):
         """Rend l'écran."""
@@ -118,55 +140,26 @@ class MyGame(arcade.Window):
         arcade.draw_text(timer_text, 10, SCREEN_HEIGHT - 40, arcade.color.BLACK, 16)
 
         # Dessiner le score d'argent
-        money_text = f"Argent : ${self.money}"
-        arcade.draw_text(money_text, 10, SCREEN_HEIGHT - 80, arcade.color.BLACK, 16)
+        money_text = f"Argent : {self.money}"
+        arcade.draw_text(money_text, 10, SCREEN_HEIGHT - 60, arcade.color.BLACK, 16)
 
     def on_key_press(self, key, modifiers):
-        """Appelé lorsque une touche est pressée."""
-
-        if key == arcade.key.UP or key == arcade.key.W:
+        """Appelé à chaque fois qu'une touche est enfoncée"""
+        if key == arcade.key.UP:
             self.player_sprite.change_y = PLAYER_MOVEMENT_SPEED
-        elif key == arcade.key.DOWN or key == arcade.key.S:
+        elif key == arcade.key.DOWN:
             self.player_sprite.change_y = -PLAYER_MOVEMENT_SPEED
-        elif key == arcade.key.LEFT or key == arcade.key.A:
+        elif key == arcade.key.LEFT:
             self.player_sprite.change_x = -PLAYER_MOVEMENT_SPEED
-        elif key == arcade.key.RIGHT or key == arcade.key.D:
+        elif key == arcade.key.RIGHT:
             self.player_sprite.change_x = PLAYER_MOVEMENT_SPEED
 
     def on_key_release(self, key, modifiers):
-        """Appelé lorsque l'utilisateur relâche une touche."""
-
-        if key == arcade.key.UP or key == arcade.key.W:
+        """Appelé à chaque fois qu'une touche est relâchée"""
+        if key == arcade.key.UP or key == arcade.key.DOWN:
             self.player_sprite.change_y = 0
-        elif key == arcade.key.DOWN or key == arcade.key.S:
-            self.player_sprite.change_y = 0
-        elif key == arcade.key.LEFT or key == arcade.key.A:
+        elif key == arcade.key.LEFT or key == arcade.key.RIGHT:
             self.player_sprite.change_x = 0
-        elif key == arcade.key.RIGHT or key == arcade.key.D:
-            self.player_sprite.change_x = 0
-
-    def on_update(self, delta_time):
-        """Mouvement et logique du jeu"""
-
-        # Déplacer le joueur avec le moteur physique
-        self.physics_engine.update()
-
-        # Mettre à jour le timer
-        self.timer -= delta_time
-        if self.timer < 0:
-            self.timer = 0
-
-        # Vérifier les collisions entre le joueur et les pièces
-        self.check_coin_collisions()
-
-    def check_coin_collisions(self):
-        """Vérifie les collisions entre le joueur et les pièces et met à jour le score d'argent."""
-
-        coins = self.scene.get_sprite_list("Coins")
-        for coin in coins:
-            if arcade.check_for_collision(self.player_sprite, coin):
-                self.money += COIN_VALUE
-                coin.remove_from_sprite_lists()  # Supprimer la pièce de la scène
 
 def main():
     """Fonction principale"""
