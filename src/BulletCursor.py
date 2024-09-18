@@ -12,7 +12,7 @@ SCREEN_TITLE = "Better Move Sprite with Keyboard Example"
 
 MOVEMENT_SPEED = 5
 COIN_COUNT = 50
-BULLET_SPEED = 5
+BULLET_SPEED = 15
 SPRITE_SCALING_LASER = 0.8
 
 
