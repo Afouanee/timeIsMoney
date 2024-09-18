@@ -1,5 +1,6 @@
 import arcade
 import random
+import math
 
 # Constantes
 SCREEN_WIDTH = 840
@@ -9,9 +10,11 @@ SCREEN_TITLE = "Platformer"
 # Constantes utilisées pour redimensionner nos sprites par rapport à leur taille originale
 CHARACTER_SCALING = 0.5  # Réduit la taille du joueur
 TILE_SCALING = 0.5
+BULLET_SCALING = 0.5
 
 # Vitesse de déplacement du joueur, en pixels par frame
 PLAYER_MOVEMENT_SPEED = 5
+BULLET_SPEED = 10
 
 # Constantes du timer
 TIMER_START = 3600  # 1 heure en secondes
@@ -48,9 +51,12 @@ class MyGame(arcade.Window):
         self.player_sprite = None
         self.enemy_list = None
         self.coin_list = None  # Liste pour les pièces
+        self.bullet_list = None  # Liste pour les balles
         self.physics_engine = None
         self.timer = TIMER_START
         self.money = INITIAL_MONEY
+        self.mouse_x = 0
+        self.mouse_y = 0
         arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
 
     def setup(self):
@@ -67,11 +73,14 @@ class MyGame(arcade.Window):
 
         # Créer les murs et autres objets du labyrinthe à partir du tableau
         self.create_maze()
-        
+
         # Créer le moteur physique
         self.physics_engine = arcade.PhysicsEngineSimple(
             self.player_sprite, self.scene.get_sprite_list("Walls")
         )
+
+        # Initialiser la liste des balles
+        self.bullet_list = arcade.SpriteList()
 
     def place_player(self):
         """Place le joueur dans une position libre du labyrinthe."""
@@ -108,11 +117,32 @@ class MyGame(arcade.Window):
                         self.coin_list.append(coin)
                         self.scene.add_sprite("Coins", coin)
                     else:
-                        enemy = arcade.Sprite("blastalot-wings-crouch-alpha.png", CHARACTER_SCALING)
+                        enemy = arcade.Sprite(":resources:images/enemies/slimeGreen.png", CHARACTER_SCALING)
                         enemy.center_x = x
                         enemy.center_y = y
                         self.enemy_list.append(enemy)
                         self.scene.add_sprite("Enemies", enemy)
+
+    def create_bullet(self):
+        """Crée une balle et la tire vers la position de la souris."""
+
+        bullet = arcade.Sprite(":resources:images/space_shooter/laserBlue01.png", BULLET_SCALING)
+        bullet.center_x = self.player_sprite.center_x
+        bullet.center_y = self.player_sprite.center_y
+
+        # Calculer la direction vers la souris
+        dest_x = self.mouse_x
+        dest_y = self.mouse_y
+        x_diff = dest_x - self.player_sprite.center_x
+        y_diff = dest_y - self.player_sprite.center_y
+        angle = math.atan2(y_diff, x_diff)
+
+        bullet.angle = math.degrees(angle)
+        bullet.change_x = math.cos(angle) * BULLET_SPEED
+        bullet.change_y = math.sin(angle) * BULLET_SPEED
+
+        self.bullet_list.append(bullet)
+        self.scene.add_sprite("Bullets", bullet)
 
     def on_update(self, delta_time):
         """Mouvement et logique du jeu"""
@@ -132,10 +162,26 @@ class MyGame(arcade.Window):
             self.money += COIN_VALUE
             coin.remove_from_sprite_lists()
 
+        # Vérifier les collisions entre les balles et les ennemis
+        for bullet in self.bullet_list:
+            enemies_hit = arcade.check_for_collision_with_list(bullet, self.enemy_list)
+            for enemy in enemies_hit:
+                self.create_coin_from_enemy(enemy)
+                enemy.remove_from_sprite_lists()
+                bullet.remove_from_sprite_lists()
+
+            # Vérifier si les balles sortent de l'écran
+            if (bullet.bottom > SCREEN_HEIGHT or bullet.top < 0 or
+                bullet.right < 0 or bullet.left > SCREEN_WIDTH):
+                bullet.remove_from_sprite_lists()
+
         # Décrémenter le timer
         self.timer -= delta_time
         if self.timer < 0:
             self.timer = 0
+
+        # Mise à jour de la liste des balles
+        self.bullet_list.update()
 
     def create_coin_from_enemy(self, enemy):
         """Crée une pièce à l'emplacement de l'ennemi mort et l'ajoute à la liste des pièces."""
@@ -165,6 +211,8 @@ class MyGame(arcade.Window):
             self.player_sprite.change_x = -PLAYER_MOVEMENT_SPEED
         elif key == arcade.key.RIGHT:
             self.player_sprite.change_x = PLAYER_MOVEMENT_SPEED
+        elif key == arcade.key.SPACE:
+            self.create_bullet()  # Tirer une balle lorsque la touche espace est enfoncée
 
     def on_key_release(self, key, modifiers):
         """Appelé à chaque fois qu'une touche est relâchée"""
@@ -172,6 +220,11 @@ class MyGame(arcade.Window):
             self.player_sprite.change_y = 0
         elif key == arcade.key.LEFT or key == arcade.key.RIGHT:
             self.player_sprite.change_x = 0
+
+    def on_mouse_motion(self, x, y, dx, dy):
+        """Met à jour la position de la souris"""
+        self.mouse_x = x
+        self.mouse_y = y
 
 def main():
     """Fonction principale"""
