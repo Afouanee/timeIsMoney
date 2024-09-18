@@ -2,19 +2,19 @@ import arcade
 import random
 
 # Constantes
-SCREEN_WIDTH = 1000
-SCREEN_HEIGHT = 650
+SCREEN_WIDTH = 840
+SCREEN_HEIGHT = 520
 SCREEN_TITLE = "Platformer"
 
 # Constantes utilisées pour redimensionner nos sprites par rapport à leur taille originale
-CHARACTER_SCALING = 1
+CHARACTER_SCALING = 0.5  # Réduit la taille du joueur
 TILE_SCALING = 0.5
 
 # Vitesse de déplacement du joueur, en pixels par frame
 PLAYER_MOVEMENT_SPEED = 5
 
 # Constantes du timer
-TIMER_START = 24 * 60 * 60  # 24 heures en secondes
+TIMER_START = 3600  # 1 heure en secondes
 
 # Constantes du score
 INITIAL_MONEY = 0
@@ -22,11 +22,19 @@ COIN_VALUE = 10
 
 # Constantes du labyrinthe
 TILE_SIZE = 64
-WALLS = [
-    # (x, y) coordonnées des murs
-    (200, 200), (300, 200), (400, 200), (500, 200),
-    (200, 300), (500, 300),
-    (200, 400), (300, 400), (400, 400), (500, 400),
+MAP_WIDTH = 13  # Largeur du tableau (en nombre de tuiles)
+MAP_HEIGHT = 8  # Hauteur du tableau (en nombre de tuiles)
+
+# Exemple de tableau de labyrinthe
+MAZE_MAP = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1],
+    [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1],
+    [1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ]
 
 class MyGame(arcade.Window):
@@ -50,62 +58,61 @@ class MyGame(arcade.Window):
 
         self.scene = arcade.Scene()
 
-        # Configurer le joueur, en le plaçant spécifiquement à ces coordonnées
+        # Configurer le joueur, en le plaçant à une position libre dans le labyrinthe
         image_source = ":resources:images/animated_characters/male_person/malePerson_idle.png"
         self.player_sprite = arcade.Sprite(image_source, CHARACTER_SCALING)
-        self.player_sprite.center_x = 64
-        self.player_sprite.center_y = 128
+        self.place_player()
+
         self.scene.add_sprite("Player", self.player_sprite)
 
-        # Créer les murs du labyrinthe
-        for (x, y) in WALLS:
-            wall = arcade.Sprite(":resources:images/tiles/dirtHalf.png", TILE_SCALING)
-            wall.center_x = x
-            wall.center_y = SCREEN_HEIGHT - y
-            self.scene.add_sprite("Walls", wall)
-
-        # Créer les pièces
-        self.coin_list = arcade.SpriteList()
-        self.place_coins()
-
-        # Créer les ennemis
-        self.enemy_list = arcade.SpriteList()
-        self.create_enemies()
-
+        # Créer les murs et autres objets du labyrinthe à partir du tableau
+        self.create_maze()
+        
         # Créer le moteur physique
         self.physics_engine = arcade.PhysicsEngineSimple(
             self.player_sprite, self.scene.get_sprite_list("Walls")
         )
 
-    def place_coins(self):
-        """Place des pièces aléatoirement dans le labyrinthe."""
-        for _ in range(10):  # Nombre de pièces à placer
-            while True:
-                x = random.randint(100, SCREEN_WIDTH - 100)
-                y = random.randint(100, SCREEN_HEIGHT - 100)
-                if not any(abs(x - wx) < TILE_SIZE and abs(y - wy) < TILE_SIZE for wx, wy in WALLS):
-                    coin = arcade.Sprite(":resources:images/items/coinGold_ul.png", TILE_SCALING)
-                    coin.center_x = x
-                    coin.center_y = y
-                    self.coin_list.append(coin)
-                    self.scene.add_sprite("Coins", coin)
-                    break
+    def place_player(self):
+        """Place le joueur dans une position libre du labyrinthe."""
+        while True:
+            row = random.randint(0, MAP_HEIGHT - 1)
+            col = random.randint(0, MAP_WIDTH - 1)
+            if MAZE_MAP[row][col] == 0:
+                self.player_sprite.center_x = col * TILE_SIZE + TILE_SIZE / 2
+                self.player_sprite.center_y = SCREEN_HEIGHT - (row * TILE_SIZE + TILE_SIZE / 2)
+                break
 
-    def create_enemies(self):
-        """Crée des ennemis et les place dans la scène."""
+    def create_maze(self):
+        """Crée le labyrinthe en fonction du tableau MAZE_MAP."""
 
-        num_enemies = 5  # Nombre d'ennemis
-        for _ in range(num_enemies):
-            while True:
-                x = random.randint(100, SCREEN_WIDTH - 100)
-                y = random.randint(100, SCREEN_HEIGHT - 100)
-                if not any(abs(x - wx) < TILE_SIZE and abs(y - wy) < TILE_SIZE for wx, wy in WALLS):
-                    enemy = arcade.Sprite("blastalot-wings-crouch-alpha.png", CHARACTER_SCALING)
-                    enemy.center_x = x
-                    enemy.center_y = y
-                    self.enemy_list.append(enemy)
-                    self.scene.add_sprite("Enemies", enemy)
-                    break
+        self.coin_list = arcade.SpriteList()
+        self.enemy_list = arcade.SpriteList()
+
+        for row in range(MAP_HEIGHT):
+            for col in range(MAP_WIDTH):
+                x = col * TILE_SIZE + TILE_SIZE / 2
+                y = SCREEN_HEIGHT - (row * TILE_SIZE + TILE_SIZE / 2)
+                if MAZE_MAP[row][col] == 1:
+                    # Créer un mur
+                    wall = arcade.Sprite(":resources:images/tiles/dirtHalf.png", TILE_SCALING)
+                    wall.center_x = x
+                    wall.center_y = y
+                    self.scene.add_sprite("Walls", wall)
+                elif MAZE_MAP[row][col] == 0:
+                    # Placer des pièces ou des ennemis aléatoirement
+                    if random.choice([True, False]):  # Chance de 50% pour une pièce
+                        coin = arcade.Sprite(":resources:images/items/coinGold_ul.png", TILE_SCALING)
+                        coin.center_x = x
+                        coin.center_y = y
+                        self.coin_list.append(coin)
+                        self.scene.add_sprite("Coins", coin)
+                    else:
+                        enemy = arcade.Sprite("blastalot-wings-crouch-alpha.png", CHARACTER_SCALING)
+                        enemy.center_x = x
+                        enemy.center_y = y
+                        self.enemy_list.append(enemy)
+                        self.scene.add_sprite("Enemies", enemy)
 
     def on_update(self, delta_time):
         """Mouvement et logique du jeu"""
@@ -125,6 +132,11 @@ class MyGame(arcade.Window):
             self.money += COIN_VALUE
             coin.remove_from_sprite_lists()
 
+        # Décrémenter le timer
+        self.timer -= delta_time
+        if self.timer < 0:
+            self.timer = 0
+
     def create_coin_from_enemy(self, enemy):
         """Crée une pièce à l'emplacement de l'ennemi mort et l'ajoute à la liste des pièces."""
         coin = arcade.Sprite(":resources:images/items/coinGold_ul.png", TILE_SCALING)
@@ -140,8 +152,8 @@ class MyGame(arcade.Window):
         self.scene.draw()
 
         minutes, seconds = divmod(int(self.timer), 60)
-        arcade.draw_text(f"Temps restant : {minutes:02}:{seconds:02}", 10, SCREEN_HEIGHT - 40, arcade.color.BLACK, 16)
-        arcade.draw_text(f"Argent : {self.money}", 10, SCREEN_HEIGHT - 60, arcade.color.BLACK, 16)
+        arcade.draw_text(f"Life Time : {minutes:02}:{seconds:02}", 10, 10, arcade.color.BLACK, 16)
+        arcade.draw_text(f"Argent : {self.money}", SCREEN_WIDTH - 200, 10, arcade.color.BLACK, 16)
 
     def on_key_press(self, key, modifiers):
         """Appelé à chaque fois qu'une touche est enfoncée"""
