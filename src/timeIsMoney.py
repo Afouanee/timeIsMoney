@@ -1,4 +1,5 @@
 import arcade
+import random
 
 # Constantes
 SCREEN_WIDTH = 1000
@@ -17,6 +18,16 @@ TIMER_START = 24 * 60 * 60  # 24 heures en secondes
 
 # Constantes du score
 INITIAL_MONEY = 0
+COIN_VALUE = 10
+
+# Constantes du labyrinthe
+TILE_SIZE = 64
+WALLS = [
+    # (x, y) coordonnées des murs
+    (200, 200), (300, 200), (400, 200), (500, 200),
+    (200, 300), (500, 300),
+    (200, 400), (300, 400), (400, 400), (500, 400),
+]
 
 class MyGame(arcade.Window):
     """
@@ -57,28 +68,39 @@ class MyGame(arcade.Window):
         self.player_sprite.center_y = 128
         self.scene.add_sprite("Player", self.player_sprite)
 
-        # Créer le sol
-        for x in range(0, 1250, 64):
+        # Créer les murs du labyrinthe
+        for (x, y) in WALLS:
             wall = arcade.Sprite(":resources:images/tiles/dirtHalf.png", TILE_SCALING)
             wall.center_x = x
-            wall.center_y = 32
+            wall.center_y = SCREEN_HEIGHT - y
             self.scene.add_sprite("Walls", wall)
 
-        # Placer des meubles sur le sol
-        coordinate_list = [[512, 96], [256, 96], [768, 96]]
-
-        for coordinate in coordinate_list:
-            # Ajouter un meuble sur le sol
-            wall = arcade.Sprite(
-                ":resources:images/items/coinGold_ul.png", TILE_SCALING  # Changez pour un sprite de meuble si nécessaire
-            )
-            wall.position = coordinate
-            self.scene.add_sprite("Walls", wall)
+        # Placer des pièces aléatoirement dans le labyrinthe
+        self.place_coins()
 
         # Créer le moteur physique
         self.physics_engine = arcade.PhysicsEngineSimple(
             self.player_sprite, self.scene.get_sprite_list("Walls")
         )
+
+    def place_coins(self):
+        """Placer des pièces aléatoirement dans le labyrinthe."""
+
+        # Déterminer les positions des murs pour éviter les collisions
+        wall_positions = [(sprite.center_x, sprite.center_y) for sprite in self.scene.get_sprite_list("Walls")]
+
+        # Créer des pièces et les placer aléatoirement dans les chemins
+        num_coins = 10  # Nombre de pièces à placer
+        for _ in range(num_coins):
+            while True:
+                x = random.randint(100, SCREEN_WIDTH - 100)
+                y = random.randint(100, SCREEN_HEIGHT - 100)
+                if not any(abs(x - wx) < TILE_SIZE and abs(y - wy) < TILE_SIZE for wx, wy in wall_positions):
+                    coin = arcade.Sprite(":resources:images/items/coinGold_ul.png", TILE_SCALING)
+                    coin.center_x = x
+                    coin.center_y = y
+                    self.scene.add_sprite("Coins", coin)
+                    break
 
     def on_draw(self):
         """Rend l'écran."""
@@ -133,6 +155,18 @@ class MyGame(arcade.Window):
         self.timer -= delta_time
         if self.timer < 0:
             self.timer = 0
+
+        # Vérifier les collisions entre le joueur et les pièces
+        self.check_coin_collisions()
+
+    def check_coin_collisions(self):
+        """Vérifie les collisions entre le joueur et les pièces et met à jour le score d'argent."""
+
+        coins = self.scene.get_sprite_list("Coins")
+        for coin in coins:
+            if arcade.check_for_collision(self.player_sprite, coin):
+                self.money += COIN_VALUE
+                coin.remove_from_sprite_lists()  # Supprimer la pièce de la scène
 
 def main():
     """Fonction principale"""
