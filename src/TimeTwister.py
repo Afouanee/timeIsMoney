@@ -11,7 +11,7 @@ SCREEN_TITLE = "Better Move Sprite with Keyboard Example"
 
 MOVEMENT_SPEED = 5
 TELEPORT_INTERVAL = 10  # Seconds
-TELEPORT_COOLDOWN = 3  # Minimum time between teleports in seconds
+TELEPORT_COOLDOWN = 2  # Minimum time between teleports in seconds
 TRAIL_LENGTH = 100  # Number of positions to keep for the trail
 REWIND_SPEED = 20  # Speed of the rewind animation
 POINT_SKIP = 2  # Number of points to skip to increase rewind speed
