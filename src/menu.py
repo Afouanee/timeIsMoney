@@ -2,8 +2,8 @@ import arcade
 import os
 import sys
 
-SCREEN_WIDTH = 1280
-SCREEN_HEIGHT = 720
+SCREEN_WIDTH = 724
+SCREEN_HEIGHT = 724
 SCREEN_TITLE = "Menu Example"
 
 class Button(arcade.SpriteSolidColor):
@@ -38,16 +38,23 @@ class Menu(arcade.Window):
         super().__init__(width, height, title)
         arcade.set_background_color(arcade.color.AMAZON)
         
+        # Load background image
+        self.background_texture = arcade.load_texture(os.path.join("C:/E4_ESIEE/Semestre3/gameJame/timeIsMoney/resources", "affiche.png"))
+        
         # Create the "Play" button
         self.start_button = Button(
-            200, 50, arcade.color.YELLOW, arcade.color.GOLD, 
+            200, 50, arcade.color.WHITE, arcade.color.PURPLE, 
             "Jouer", arcade.color.BLACK, 20
         )
         self.start_button.center_x = width // 2
-        self.start_button.center_y = height // 2
+        self.start_button.center_y = height // 1.5
 
     def on_draw(self):
         self.clear()
+        # Draw the background image
+        arcade.draw_texture_rectangle(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2,
+                                      SCREEN_WIDTH, SCREEN_HEIGHT,
+                                      self.background_texture)
         self.start_button.on_draw()
 
     def on_mouse_motion(self, x, y, dx, dy):
