@@ -1,43 +1,42 @@
 import arcade
 import random
-import math
 
 # Constantes
-SCREEN_WIDTH = 840
-SCREEN_HEIGHT = 520
-SCREEN_TITLE = "Platformer"
+SCREEN_WIDTH = 1000
+SCREEN_HEIGHT = 600
+SCREEN_TITLE = "Labyrinthe avec Boutique"
 
-# Constantes utilisées pour redimensionner nos sprites par rapport à leur taille originale
-CHARACTER_SCALING = 0.5  # Réduit la taille du joueur
+# Redimensionnement des sprites
+CHARACTER_SCALING = 0.5
 TILE_SCALING = 0.5
-BULLET_SCALING = 0.5
 
-# Vitesse de déplacement du joueur, en pixels par frame
+# Vitesse du joueur
 PLAYER_MOVEMENT_SPEED = 5
-BULLET_SPEED = 10
 
-# Constantes du timer
-TIMER_START = 3600  # 1 heure en secondes
-
-# Constantes du score
+# Timer et argent
+TIMER_START = 3600  # 1 heure
 INITIAL_MONEY = 0
 COIN_VALUE = 10
 
-# Constantes du labyrinthe
+# Taille des tuiles et dimensions du labyrinthe
 TILE_SIZE = 64
-MAP_WIDTH = 13  # Largeur du tableau (en nombre de tuiles)
-MAP_HEIGHT = 8  # Hauteur du tableau (en nombre de tuiles)
+MAP_WIDTH = 12  # Largeur du labyrinthe (nombre de tuiles), augmenté de 2
+MAP_HEIGHT = 9   # Hauteur du labyrinthe (nombre de tuiles), augmenté de 1
 
-# Exemple de tableau de labyrinthe
+# Largeur de la zone boutique
+SHOP_WIDTH = 3  # Nombre de colonnes pour la boutique
+
+# Exemple de labyrinthe simple avec de grandes allées, agrandi
 MAZE_MAP = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1],
-    [1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1],
-    [1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1],
-    [1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ]
 
 class MyGame(arcade.Window):
@@ -50,37 +49,28 @@ class MyGame(arcade.Window):
         self.scene = None
         self.player_sprite = None
         self.enemy_list = None
-        self.coin_list = None  # Liste pour les pièces
-        self.bullet_list = None  # Liste pour les balles
+        self.coin_list = None
         self.physics_engine = None
         self.timer = TIMER_START
         self.money = INITIAL_MONEY
-        self.mouse_x = 0
-        self.mouse_y = 0
-        arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
+        arcade.set_background_color(arcade.csscolor.LIGHT_SKY_BLUE)
 
     def setup(self):
-        """Configure le jeu ici. Appelez cette fonction pour redémarrer le jeu."""
-
+        """Configure le jeu ici."""
         self.scene = arcade.Scene()
 
-        # Configurer le joueur, en le plaçant à une position libre dans le labyrinthe
+        # Configuration du joueur
         image_source = ":resources:images/animated_characters/male_person/malePerson_idle.png"
         self.player_sprite = arcade.Sprite(image_source, CHARACTER_SCALING)
         self.place_player()
 
         self.scene.add_sprite("Player", self.player_sprite)
 
-        # Créer les murs et autres objets du labyrinthe à partir du tableau
+        # Créer le labyrinthe
         self.create_maze()
 
         # Créer le moteur physique
-        self.physics_engine = arcade.PhysicsEngineSimple(
-            self.player_sprite, self.scene.get_sprite_list("Walls")
-        )
-
-        # Initialiser la liste des balles
-        self.bullet_list = arcade.SpriteList()
+        self.physics_engine = arcade.PhysicsEngineSimple(self.player_sprite, self.scene.get_sprite_list("Walls"))
 
     def place_player(self):
         """Place le joueur dans une position libre du labyrinthe."""
@@ -89,19 +79,18 @@ class MyGame(arcade.Window):
             col = random.randint(0, MAP_WIDTH - 1)
             if MAZE_MAP[row][col] == 0:
                 self.player_sprite.center_x = col * TILE_SIZE + TILE_SIZE / 2
-                self.player_sprite.center_y = SCREEN_HEIGHT - (row * TILE_SIZE + TILE_SIZE / 2)
+                self.player_sprite.center_y = SCREEN_HEIGHT - (row * TILE_SIZE + TILE_SIZE / 2) - 50
                 break
 
     def create_maze(self):
-        """Crée le labyrinthe en fonction du tableau MAZE_MAP."""
-
+        """Crée le labyrinthe en fonction de la carte."""
         self.coin_list = arcade.SpriteList()
         self.enemy_list = arcade.SpriteList()
 
         for row in range(MAP_HEIGHT):
             for col in range(MAP_WIDTH):
                 x = col * TILE_SIZE + TILE_SIZE / 2
-                y = SCREEN_HEIGHT - (row * TILE_SIZE + TILE_SIZE / 2)
+                y = SCREEN_HEIGHT - (row * TILE_SIZE + TILE_SIZE / 2) - 50 + TILE_SIZE  # Déplacer vers le haut
                 if MAZE_MAP[row][col] == 1:
                     # Créer un mur
                     wall = arcade.Sprite(":resources:images/tiles/dirtHalf.png", TILE_SCALING)
@@ -116,45 +105,10 @@ class MyGame(arcade.Window):
                         coin.center_y = y
                         self.coin_list.append(coin)
                         self.scene.add_sprite("Coins", coin)
-                    else:
-                        enemy = arcade.Sprite(":resources:images/enemies/slimeGreen.png", CHARACTER_SCALING)
-                        enemy.center_x = x
-                        enemy.center_y = y
-                        self.enemy_list.append(enemy)
-                        self.scene.add_sprite("Enemies", enemy)
-
-    def create_bullet(self):
-        """Crée une balle et la tire vers la position de la souris."""
-
-        bullet = arcade.Sprite(":resources:images/space_shooter/laserBlue01.png", BULLET_SCALING)
-        bullet.center_x = self.player_sprite.center_x
-        bullet.center_y = self.player_sprite.center_y
-
-        # Calculer la direction vers la souris
-        dest_x = self.mouse_x
-        dest_y = self.mouse_y
-        x_diff = dest_x - self.player_sprite.center_x
-        y_diff = dest_y - self.player_sprite.center_y
-        angle = math.atan2(y_diff, x_diff)
-
-        bullet.angle = math.degrees(angle)
-        bullet.change_x = math.cos(angle) * BULLET_SPEED
-        bullet.change_y = math.sin(angle) * BULLET_SPEED
-
-        self.bullet_list.append(bullet)
-        self.scene.add_sprite("Bullets", bullet)
 
     def on_update(self, delta_time):
-        """Mouvement et logique du jeu"""
-
-        # Mettre à jour le moteur physique
+        """Mouvement et logique du jeu."""
         self.physics_engine.update()
-
-        # Vérifier les collisions entre le joueur et les ennemis
-        enemies_hit = arcade.check_for_collision_with_list(self.player_sprite, self.enemy_list)
-        for enemy in enemies_hit:
-            self.create_coin_from_enemy(enemy)
-            enemy.remove_from_sprite_lists()
 
         # Vérifier les collisions entre le joueur et les pièces
         coins_hit = arcade.check_for_collision_with_list(self.player_sprite, self.coin_list)
@@ -162,47 +116,28 @@ class MyGame(arcade.Window):
             self.money += COIN_VALUE
             coin.remove_from_sprite_lists()
 
-        # Vérifier les collisions entre les balles et les ennemis
-        for bullet in self.bullet_list:
-            enemies_hit = arcade.check_for_collision_with_list(bullet, self.enemy_list)
-            for enemy in enemies_hit:
-                self.create_coin_from_enemy(enemy)
-                enemy.remove_from_sprite_lists()
-                bullet.remove_from_sprite_lists()
-
-            # Vérifier si les balles sortent de l'écran
-            if (bullet.bottom > SCREEN_HEIGHT or bullet.top < 0 or
-                bullet.right < 0 or bullet.left > SCREEN_WIDTH):
-                bullet.remove_from_sprite_lists()
-
         # Décrémenter le timer
         self.timer -= delta_time
         if self.timer < 0:
             self.timer = 0
 
-        # Mise à jour de la liste des balles
-        self.bullet_list.update()
-
-    def create_coin_from_enemy(self, enemy):
-        """Crée une pièce à l'emplacement de l'ennemi mort et l'ajoute à la liste des pièces."""
-        coin = arcade.Sprite(":resources:images/items/coinGold_ul.png", TILE_SCALING)
-        coin.center_x = enemy.center_x
-        coin.center_y = enemy.center_y
-        self.coin_list.append(coin)
-        self.scene.add_sprite("Coins", coin)
-
     def on_draw(self):
         """Rend l'écran."""
-
         self.clear()
         self.scene.draw()
 
+        # Affichage du timer et de l'argent
         minutes, seconds = divmod(int(self.timer), 60)
         arcade.draw_text(f"Life Time : {minutes:02}:{seconds:02}", 10, 10, arcade.color.BLACK, 16)
         arcade.draw_text(f"Argent : {self.money}", SCREEN_WIDTH - 200, 10, arcade.color.BLACK, 16)
 
+        # Zone de boutique (sur la droite)
+        arcade.draw_text("Boutique", SCREEN_WIDTH - 220, SCREEN_HEIGHT - 50, arcade.color.BLACK, 24)
+        arcade.draw_text("1. Power Up - $50", SCREEN_WIDTH - 220, SCREEN_HEIGHT - 100, arcade.color.BLACK, 16)
+        arcade.draw_text("2. 10min for $100", SCREEN_WIDTH - 220, SCREEN_HEIGHT - 150, arcade.color.BLACK, 16)
+
     def on_key_press(self, key, modifiers):
-        """Appelé à chaque fois qu'une touche est enfoncée"""
+        """Appelé lorsqu'une touche est enfoncée."""
         if key == arcade.key.UP:
             self.player_sprite.change_y = PLAYER_MOVEMENT_SPEED
         elif key == arcade.key.DOWN:
@@ -211,23 +146,24 @@ class MyGame(arcade.Window):
             self.player_sprite.change_x = -PLAYER_MOVEMENT_SPEED
         elif key == arcade.key.RIGHT:
             self.player_sprite.change_x = PLAYER_MOVEMENT_SPEED
-        elif key == arcade.key.SPACE:
-            self.create_bullet()  # Tirer une balle lorsque la touche espace est enfoncée
+        elif key == arcade.key.KEY_1:  # Acheter un power-up
+            if self.money >= 50:
+                self.money -= 50
+                # Ajoutez la logique pour le power-up ici
+        elif key == arcade.key.KEY_2:  # Acheter du temps
+            if self.money >= 100:
+                self.money -= 100
+                self.timer += 60  # Ajouter 60 secondes
 
     def on_key_release(self, key, modifiers):
-        """Appelé à chaque fois qu'une touche est relâchée"""
+        """Appelé lorsqu'une touche est relâchée."""
         if key == arcade.key.UP or key == arcade.key.DOWN:
             self.player_sprite.change_y = 0
         elif key == arcade.key.LEFT or key == arcade.key.RIGHT:
             self.player_sprite.change_x = 0
 
-    def on_mouse_motion(self, x, y, dx, dy):
-        """Met à jour la position de la souris"""
-        self.mouse_x = x
-        self.mouse_y = y
-
 def main():
-    """Fonction principale"""
+    """Fonction principale."""
     window = MyGame()
     window.setup()
     arcade.run()
