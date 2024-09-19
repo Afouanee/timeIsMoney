@@ -10,9 +10,11 @@ SCREEN_HEIGHT = 720
 SCREEN_TITLE = "Better Move Sprite with Keyboard Example"
 
 MOVEMENT_SPEED = 5
-TELEPORT_INTERVAL = 5  # Seconds
+TELEPORT_INTERVAL = 10  # Seconds
 TELEPORT_COOLDOWN = 3  # Minimum time between teleports in seconds
-TRAIL_LENGTH = 50  # Number of positions to keep for the trail
+TRAIL_LENGTH = 100  # Number of positions to keep for the trail
+REWIND_SPEED = 20  # Speed of the rewind animation
+POINT_SKIP = 2  # Number of points to skip to increase rewind speed
 
 
 class Player(arcade.Sprite):
@@ -64,8 +66,14 @@ class MyGame(arcade.Window):
         # List to store the trail positions
         self.trail = deque(maxlen=TRAIL_LENGTH)  # Store positions for trail effect
 
+        # List to store the reverse path for the rewind effect
+        self.reverse_path = []
+
         # Track time of last teleport
         self.last_teleport_time = 0
+
+        # Rewinding state flag
+        self.is_rewinding = False
 
         # Thread control flag
         self.thread_started = False
@@ -98,8 +106,9 @@ class MyGame(arcade.Window):
     def on_draw(self):
         """ Render the screen. """
         self.clear()
-        # Draw the trail
-        self.draw_trail()
+        # Draw the trail only if not rewinding
+        if not self.is_rewinding:
+            self.draw_trail()
 
         # Draw all the sprites.
         self.obstacle1.draw()
@@ -138,6 +147,10 @@ class MyGame(arcade.Window):
         # Update the trail positions
         self.update_trail()
 
+        # Rewind if the player is in rewind mode
+        if self.is_rewinding:
+            self.rewind_movement()
+
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
         if key == arcade.key.Z:
@@ -153,7 +166,7 @@ class MyGame(arcade.Window):
             self.right_pressed = True
             self.update_player_speed()
         elif key == arcade.key.SPACE:
-            self.teleport_to_past_position()
+            self.start_rewind()
 
     def on_key_release(self, key, modifiers):
         """Called when the user releases a key. """
@@ -172,31 +185,62 @@ class MyGame(arcade.Window):
 
     def save_player_position(self):
         """Save the current player position to history."""
-        current_position = (self.player_sprite.center_x, self.player_sprite.center_y)
-        self.position_history.append(current_position)
+        if not self.is_rewinding:
+            current_position = (self.player_sprite.center_x, self.player_sprite.center_y)
+            self.position_history.append(current_position)
 
     def update_trail(self):
         """Update the trail positions with the current player position."""
-        current_position = (self.player_sprite.center_x, self.player_sprite.center_y)
-        self.trail.append(current_position)
+        if not self.is_rewinding:
+            current_position = (self.player_sprite.center_x, self.player_sprite.center_y)
+            self.trail.append(current_position)
 
     def draw_trail(self):
         """Draw the player's trail."""
         if len(self.trail) > 1:
             arcade.draw_line_strip(self.trail, arcade.color.YELLOW, 2)
 
-    def teleport_to_past_position(self):
-        """Teleport the player to the position they were at 5 seconds ago."""
+    def start_rewind(self):
+        """Initiate the rewind process to the position the player was at 5 seconds ago."""
         current_time = time.time()
         if current_time - self.last_teleport_time >= TELEPORT_COOLDOWN:
             if len(self.position_history) >= int(TELEPORT_INTERVAL / 0.1):
-                # Get the position from 5 seconds ago
-                past_position = self.position_history[0]
-                self.player_sprite.center_x, self.player_sprite.center_y = past_position
-                self.last_teleport_time = current_time
-                print(f"Player teleported to: x={self.player_sprite.center_x}, y={self.player_sprite.center_y}")
+                # Clear the trail to avoid showing a line from the old to new position
+                self.trail.clear()
+
+                # Prepare the reverse path
+                # Skip points in reverse path to accelerate the rewind
+                self.reverse_path = list(self.position_history)[::-POINT_SKIP]  # Skip points for faster rewind
+                self.is_rewinding = True
+                print("Rewind started...")
         else:
-            print("Teleportation is on cooldown. Please wait.")
+            print("Rewind is on cooldown. Please wait.")
+
+    def rewind_movement(self):
+        """Move the player along the reverse path."""
+        if self.reverse_path:
+            target_x, target_y = self.reverse_path.pop(0)
+            direction_x = target_x - self.player_sprite.center_x
+            direction_y = target_y - self.player_sprite.center_y
+
+            distance = (direction_x ** 2 + direction_y ** 2) ** 0.5
+
+            if distance > REWIND_SPEED:
+                # Move the player towards the target at REWIND_SPEED
+                direction_x /= distance
+                direction_y /= distance
+
+                self.player_sprite.center_x += direction_x * REWIND_SPEED
+                self.player_sprite.center_y += direction_y * REWIND_SPEED
+            else:
+                # Snap to the position if close enough
+                self.player_sprite.center_x = target_x
+                self.player_sprite.center_y = target_y
+        else:
+            # Rewind complete
+            self.is_rewinding = False
+            self.last_teleport_time = time.time()
+            print("Rewind completed.")
 
     def print_player_position(self):
         """Prints the player's position every 5 seconds."""
