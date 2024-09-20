@@ -4,7 +4,7 @@ import sys
 
 SCREEN_WIDTH = 724
 SCREEN_HEIGHT = 724
-SCREEN_TITLE = "Menu Example"
+SCREEN_TITLE = "Main Menu"
 
 class Button(arcade.SpriteSolidColor):
     def __init__(self, width, height, color, hover_color, text, font_color, font_size):
@@ -39,7 +39,7 @@ class Menu(arcade.Window):
         arcade.set_background_color(arcade.color.AMAZON)
         
         # Load background image
-        self.background_texture = arcade.load_texture(os.path.join("C:/E4_ESIEE/Semestre3/gameJame/timeIsMoney/resources", "affiche.png"))
+        self.background_texture = arcade.load_texture(os.path.join("../resources/", "affiche.png"))
         
         # Create the "Play" button
         self.start_button = Button(
@@ -70,7 +70,7 @@ class Menu(arcade.Window):
     def start_game(self):
         """Launch the timetwister.py file and close the menu window."""
         # Get the absolute path to timetwister.py
-        timetwister_path = os.path.join(os.path.dirname(__file__), 'timetwister.py')
+        timetwister_path = os.path.join(os.path.dirname(__file__), 'TimeTwister.py')
         # Replace the current process with timetwister.py
         os.execv(sys.executable, [sys.executable, timetwister_path])
         # Close the menu window (this line will not be reached due to os.execv)
@@ -79,6 +79,8 @@ class Menu(arcade.Window):
 def main():
     window = Menu(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
     arcade.run()
+    my_sound = arcade.load_sound("/home/roland/PycharmProjects/timeIsMoney/resources/The Unwound Future.mp3")
+    arcade.play_sound(my_sound)
 
 if __name__ == "__main__":
     main()
