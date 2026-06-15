@@ -33,6 +33,3 @@ src/
 └── BulletCursor.py  # démo arcade séparée
 # + ressources images
 ```
-
----
-👤 **Auteur** : Afouane MOUHAMAD — [Portfolio](https://afouanee.dev) · [LinkedIn](https://linkedin.com/in/afouane-mouhamad)
